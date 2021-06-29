@@ -1,0 +1,57 @@
+#search Mail/pseudo/domain via ubuntu GPG, protonmail and co (9 servers)
+#retrieves linked usernames and creation dates
+###Beware, the last two servers MIT.EDU and CIRCL.LU seem very fragile.
+###They accept few requests before blocking.
+pgpscript () {
+DATE=$(date)
+VARIABLE="$@"
+
+if [ $# = 0 ]
+then
+	echo "Enter one or more arguments"
+	exit
+fi
+
+for VAR in $VARIABLE
+do
+#requête 8 serveurs
+echo "You are looking for $@ we are the $DATE". > log_$VAR
+echo "###RESULTAT $@ - GPG UBUNTU###" >> log_$VAR
+gpg --armor --keyserver hkp://keyserver.ubuntu.com --search $VAR >> log_$VAR
+echo "###RESULTAT $@ - GNUPG###" >> log_$VAR
+gpg --armor --keyserver hkp://keys.gnupg.net --search $VAR >> log_$VAR
+echo "###RESULTAT $@ - POOL.SKS###" >> log_$VAR
+gpg --armor --keyserver hkp://pool.sks-keyservers.net --search $VAR >> log_$VAR
+echo "###RESULTAT $@ - PGP.MIT.EDU###" >> log_$VAR
+gpg --armor --keyserver hkp://pgp.mit.edu --search $VAR >> log_$VAR
+echo "###RESULTAT $@ - PGP.CIRCL.LU###" >> log_$VAR
+gpg --armor --keyserver hkp://pgp.circl.lu --search $VAR >> log_$VAR
+echo "###RESULTAT $@ - OPENPGP.ORG###" >> log_$VAR
+gpg --armor --keyserver keys.openpgp.org --search $VAR >> log_$VAR
+echo "###RESULTAT $@ - ATTESTER.FLOWCRYPT###" >> log_$VAR
+gpg --armor --keyserver attester.flowcrypt.com --search $VAR >> log_$VAR
+echo "###RESULTAT $@ - ZIMMERMANN.MAYFIRST.ORG###" >> log_$VAR
+gpg --armor --keyserver zimmermann.mayfirst.org --search $VAR >> log_$VAR
+#requête protonmail
+if [[ $VAR =~ [Pp][Rr][Oo][Tt][Oo][Nn] ]];then
+	echo "###RESULTAT $@ - PROTONMAIL###" >> log_$VAR
+	gpg --armor --keyserver "hkps://api.protonmail.ch" --search $VAR >> test_$VAR
+	test_$VAR >> log_$VAR
+	cat test_$VAR|grep -E [A-Z0-9]{16}|cut -c 21-36 >> CLE
+	KEY=$(cat CLE)
+	gpg --keyserver hkps://api.protonmail.ch --receive-keys $KEY
+	gpg --export --armor $KEY >> PRIVATEKEY_$VAR
+	gpg PRIVATEKEY_$VAR >> CLEPRIVE
+	echo "###RESULTAT $@ - PROTONMAIL PUBLIC KEY###" >> log_$VAR
+	cat CLEPRIVE >> log_$VAR;rm CLEPRIVE;rm CLE;rm test_$VAR;rm ~/.gnupg/pubring.kbx
+fi
+
+if [ $# -gt 1 ]
+then
+	echo "Wait 30 seconds between each argument" && sleep 30
+fi
+
+cat log_$VAR|grep @|sed -e "s/([0-9]\{0,3\})\t*//g" -e "s/\t//g"|sort|uniq > maillist_$VAR
+done
+}
+pgpscript $@
