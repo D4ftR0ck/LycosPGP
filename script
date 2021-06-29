@@ -1,3 +1,4 @@
+#!/bin/bash
 #search Mail/pseudo/domain via ubuntu GPG, protonmail and co (9 servers)
 #retrieves linked usernames and creation dates
 ###Beware, the last two servers MIT.EDU and CIRCL.LU seem very fragile.
